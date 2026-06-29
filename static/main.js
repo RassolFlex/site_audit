@@ -7,17 +7,23 @@ const audit_domain_age_btn = document.querySelector('#audit_domain_age')
 const audit_pagespeed_btn = document.querySelector('#audit_pagespeed')
 const input_value = document.querySelector('#url')
 
-audit_ssl_btn.addEventListener('click', (event) => {
-    if (!input_value) return false
-    let f = fetch('/api/v1/audit/ssl?url='+input_value.value)
-    event.target.disabled = true
-    f.then(response => {
-        if (response.ok) {
-            return response.json()
-        };
-    })
-    .then(data => {
-        console.log(data)
+async function runCheck(btn, endpoint, fillResults) {
+    if (!input_value.value) {console.log('Введите адрес проверяемого сайта');return false}
+    btn.disabled = true
+    const btnText = btn.textContent
+    btn.textContent = 'Идёт проверка...'
+    try {
+        const response = await fetch(`/api/v1/audit/${endpoint}?url=${input_value.value}`)
+        const data = await response.json()
+        fillResults(data)
+    } finally {
+        btn.disabled = false
+        btn.textContent = btnText
+    }
+}
+
+audit_ssl_btn.addEventListener('click', async (event) => {
+    await runCheck(event.target, 'ssl', function(data) {
         if (data.ok) {
             document.querySelector('#has_ssl').textContent = 'Да'
             document.querySelector('#issuer').textContent = data.status.issuer
@@ -36,22 +42,10 @@ audit_ssl_btn.addEventListener('click', (event) => {
             document.querySelector('#cover_www').textContent = '-'
         }
     })
-    .finally(response => {
-        event.target.disabled = false
-    })
 })
 
-audit_cms_btn.addEventListener('click', (event) => {
-    if (!input_value) return false
-    let f = fetch('/api/v1/audit/cms?url='+input_value.value)
-    event.target.disabled = true
-    f.then(response => {
-        if (response.ok) {
-            return response.json()
-        };
-    })
-    .then(data => {
-        console.log(data)
+audit_cms_btn.addEventListener('click', async (event) => {
+    await runCheck(event.target, 'cms', function(data) {
         if (data.ok && data.cms) {
             document.querySelector('#has_cms').textContent = 'Да'
             document.querySelector('#cms_name').textContent = data.cms
@@ -60,22 +54,10 @@ audit_cms_btn.addEventListener('click', (event) => {
             document.querySelector('#cms_name').textContent = '-'
         }
     })
-    .finally(response => {
-        event.target.disabled = false
-    })
 })
 
-audit_redirect_btn.addEventListener('click', (event) => {
-    if (!input_value) return false
-    let f = fetch('/api/v1/audit/redirect?url='+input_value.value)
-    event.target.disabled = true
-    f.then(response => {
-        if (response.ok) {
-            return response.json()
-        };
-    })
-    .then(data => {
-        console.log(data)
+audit_redirect_btn.addEventListener('click', async (event) => {
+    await runCheck(event.target, 'redirect', function(data) {
         if (data.ok && data.has_www_redirect) {
             document.querySelector('#has_redirect').textContent = 'Да'
             document.querySelector('#redirects').textContent = data.redirect_chain
@@ -84,23 +66,11 @@ audit_redirect_btn.addEventListener('click', (event) => {
             document.querySelector('#redirects').textContent = data.redirect_chain
         }
     })
-    .finally(response => {
-        event.target.disabled = false
-    })
 })
 
 
-audit_domain_age_btn.addEventListener('click', (event) => {
-    if (!input_value) return false
-    let f = fetch('/api/v1/audit/domain_age?url='+input_value.value)
-    event.target.disabled = true
-    f.then(response => {
-        if (response.ok) {
-            return response.json()
-        };
-    })
-    .then(data => {
-        console.log(data)
+audit_domain_age_btn.addEventListener('click', async (event) => {
+    await runCheck(event.target, 'domain_age', function(data) {
         if (data.ok) {
             document.querySelector('#domain_age').textContent = data.age_years
             document.querySelector('#domain_registered').textContent = data.registered
@@ -111,23 +81,11 @@ audit_domain_age_btn.addEventListener('click', (event) => {
             document.querySelector('#domain_registrar').textContent = '-'
         }
     })
-    .finally(response => {
-        event.target.disabled = false
-    })
 })
 
 
-audit_pagespeed_btn.addEventListener('click', (event) => {
-    if (!input_value) return false
-    let f = fetch('/api/v1/audit/pagespeed?url='+input_value.value)
-    event.target.disabled = true
-    f.then(response => {
-        if (response.ok) {
-            return response.json()
-        };
-    })
-    .then(data => {
-        console.log(data)
+audit_pagespeed_btn.addEventListener('click', async (event) => {
+    await runCheck(event.target, 'pagespeed', function(data) {
         if (data.ok) {
             document.querySelector('#pagespeed_performance_score').textContent = data.performance_score+' / 100'
             document.querySelector('#pagespeed_FCP').textContent = data.FCP
@@ -143,8 +101,5 @@ audit_pagespeed_btn.addEventListener('click', (event) => {
             document.querySelector('#pagespeed_CLS').textContent = '-'
             document.querySelector('#pagespeed_SI').textContent = '-'
         }
-    })
-    .finally(response => {
-        event.target.disabled = false
     })
 })
