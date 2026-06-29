@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Express site audit</title>
+</head>
+<body>
+    <h1>Полный экспресс-аудит сайта</h1>
+    <input id="url">
+    <button id="audit_site">Провести полный аудит</button>
+    <div id="check_ssl">
+        <div>
+            <h3>Сертификат безопасности (SSL)</h3>
+            <button id="audit_ssl">Проверить SSL-сертификат</button>
+        </div>
+        <div>
+            <div>
+                <span>Сертификат есть: </span><span id="has_ssl" class="result bool"></span>
+            </div>
+            <div>
+                <span>Кем выпущен: </span><span id="issuer" class="result"></span>
+            </div>
+            <div>
+                <span>Годен до: </span><span id="days_left" class="result"></span>
+            </div>
+            <div>
+                <span>Домены в сертификате: </span><span id="domens" class="result"></span>
+            </div>
+            <div>
+                <span>Распространяется на www.*: </span><span id="cover_www" class="result bool"></span>
+            </div>
+        </div>
+    </div>
+    <div id="check_cms">
+        <div>
+            <h3>Система управления контентом (CMS)</h3>
+            <button id="audit_cms">Проверить движок сайта</button>
+        </div>
+        <div>
+            <div>
+                <span>Сайт на CMS: </span><span id="has_cms" class="result bool"></span>
+            </div>
+            <div>
+                <span>Какая CMS: </span><span id="cms_name" class="result"></span>
+            </div>
+        </div>
+    </div>
+    <div id="check_redirect">
+        <div>
+            <h3>Проверка правильности редиректов</h3>
+            <button id="audit_redirect">Проверить редиректы</button>
+        </div>
+        <div>
+            <div>
+                <span>Есть редиректы: </span><span id="has_redirect" class="result bool"></span>
+            </div>
+            <div>
+                <span>Цепочка редиректов: </span><span id="redirects" class="result"></span>
+            </div>
+        </div>
+    </div>
+    <div id="check_domain_age">
+        <div>
+            <h3>Проверка возраста домена</h3>
+            <button id="audit_domain_age">Проверить возраст домена</button>
+        </div>
+        <div>
+            <div>
+                <span>Возраст домена в годах: </span><span id="domain_age" class="result"></span>
+            </div>
+            <div>
+                <span>Зарегестрирован: </span><span id="domain_registered" class="result"></span>
+            </div>
+            <div>
+                <span>Регистратор: </span><span id="domain_registrar" class="result"></span>
+            </div>
+        </div>
+    </div>
+    <div id="check_pagespeed">
+        <div>
+            <h3>Проверка скорости загрузки сайта (Google PageSpeed)</h3>
+            <button id="audit_pagespeed">Проверить скорость</button>
+        </div>
+        <div>
+            <div>
+                <span>Общая оценка скорости загрузки: </span><span id="pagespeed_performance_score" class="result"></span>
+            </div>
+            <div>
+                <span>Показатель FCP: </span><span id="pagespeed_FCP" class="result"></span>
+            </div>
+            <div>
+                <span>Показатель LCP: </span><span id="pagespeed_LCP" class="result"></span>
+            </div>
+            <div>
+                <span>Показатель TBT: </span><span id="pagespeed_TBT" class="result"></span>
+            </div>
+            <div>
+                <span>Показатель CLS: </span><span id="pagespeed_CLS" class="result"></span>
+            </div>
+            <div>
+                <span>Показатель SI: </span><span id="pagespeed_SI" class="result"></span>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="/static/main.js"></script>
+</body>
+</html>
