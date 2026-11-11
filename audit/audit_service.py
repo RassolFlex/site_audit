@@ -5,6 +5,7 @@ import ssl
 import socket
 import datetime
 from urllib.parse import urlparse
+from time import time
 
 TIMEOUT = 10
 MAX_REDIRECTS = 5
@@ -30,16 +31,12 @@ def check_domain(url):
         if not domain:
             return {"error": "Invalid URL"}
         
-        # Query WHOIS database
         w = whois.whois(domain)
         
         if not w:
             return {"error": f"WHOIS query failed for {domain}"}
         
-        # Extract registration date
         created = w.created
-        if not created and hasattr(w, 'creation_date'):
-            created = w.creation_date
         if isinstance(created, list):
             created = created[0] if created else None
         if isinstance(created, (datetime.datetime, datetime.date)):
@@ -49,7 +46,6 @@ def check_domain(url):
         else:
             created_str = str(created) if created else "Unknown"
         
-        # Calculate domain age
         age_info = {"days": None, "years": None, "months": None}
         if isinstance(created, (datetime.datetime, datetime.date)):
             now = datetime.datetime.now()
@@ -61,7 +57,6 @@ def check_domain(url):
         elif isinstance(created, str):
             age_info["note"] = "Unable to calculate age - WHOIS date format not recognized"
         
-        # Extract expiration date
         expires = w.expiration_date
         if isinstance(expires, list):
             expires = expires[0] if expires else None
@@ -72,12 +67,10 @@ def check_domain(url):
         else:
             expires_str = str(expires) if expires else "Unknown"
         
-        # Get nameservers
         nameservers = []
         if isinstance(w.name_servers, list):
             nameservers = [ns.strip() for ns in w.name_servers]
         
-        # Extract registrar info
         registrar = None
         if isinstance(w.registrar, str):
             registrar = w.registrar.strip() if w.registrar else None
@@ -104,24 +97,22 @@ def check_domain(url):
 
 
 def check_ssl(url):
-    """Check SSL certificate details."""
+    """Check SSL/TLS configuration."""
+    parsed = urlparse(url)
+    host = parsed.hostname
+    if not host or parsed.scheme != "https":
+        return {"error": "URL must be HTTPS"}
     try:
-        parsed = urlparse(url)
-        host = parsed.hostname
-        if not host:
-            return {"error": "Invalid URL"}
-
         ctx = ssl.create_default_context()
         with socket.create_connection((host, 443), timeout=TIMEOUT) as sock:
             with ctx.wrap_socket(sock, server_hostname=host) as s:
                 cert = s.getpeercert()
-
         now = datetime.datetime.now()
         not_before = datetime.datetime.strptime(cert["notBefore"], "%b %d %H:%M:%S %Y %Z")
         not_after = datetime.datetime.strptime(cert["notAfter"], "%b %d %H:%M:%S %Y %Z")
         valid_to = not_after - now
         days = valid_to.days
-
+        
         def extract_cn(tuples):
             """Extract CN from certificate subject/issuer tuples."""
             def find_value(target_tuples, key):
@@ -139,47 +130,32 @@ def check_ssl(url):
             
             cn = find_value(tuples, "commonName") or find_value(tuples, "CN")
             return cn or "Unknown"
-
+        
         issuer = extract_cn(cert["issuer"])
         subject = extract_cn(cert["subject"])
-
+        
         return {
             "issuer": issuer,
             "subject": subject,
             "not_before": not_before.strftime("%Y-%m-%d"),
             "not_after": not_after.strftime("%Y-%m-%d"),
             "valid_to": str(valid_to),
-            "days": days,
+            "days": days
         }
     except Exception as e:
         return {"error": str(e)}
 
 
 def check_redirect(url, timeout):
-    """Check redirects, report entire chain with status codes."""
+    """Check redirects, report final URL and status."""
     try:
-        # Make request following redirects
         resp = requests.get(url, timeout=timeout, allow_redirects=True)
-
         if resp.history:
-            # Build chain from redirect history
             chain = []
             for r in resp.history:
-                chain.append({
-                    "url": r.url,
-                    "status": r.status_code,
-                    "location": r.headers.get("Location", None)
-                })
-            # Add final destination
-            chain.append({
-                "url": resp.url,
-                "status": resp.status_code,
-                "location": None
-            })
-            return {"redirect_chain": chain}
-        else:
-            # No redirects
-            return {"final_url": resp.url, "status": resp.status_code}
+                chain.append({"url": r.url, "status": r.status_code, "location": r.headers.get("Location", None)})
+            return {"redirect_chain": chain, "final_url": resp.url, "status": resp.status_code}
+        return {"final_url": resp.url, "status": resp.status_code}
     except Exception as e:
         return {"error": str(e)}
 
@@ -249,6 +225,17 @@ def check_encoding(url):
         return {"error": str(e)}
 
 
+def check_load_time(url):
+    """Measure page load time in seconds."""
+    try:
+        start = time()
+        resp = requests.get(url, timeout=TIMEOUT)
+        elapsed = time() - start
+        return {"load_time": round(elapsed, 3), "unit": "seconds", "status": resp.status_code}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def run_full_audit(url):
     """Run all checks and return results."""
     print(f"\n=== AUDIT STARTED: {url} ===")
@@ -260,7 +247,8 @@ def run_full_audit(url):
         {"sitemap": check_sitemap(url)},
         {"www": check_www(url)},
         {"charset": check_encoding(url)},
-        {"ssl": check_ssl(url)}
+        {"ssl": check_ssl(url)},
+        {"load_time": check_load_time(url)}
     ]
     for c in checks:
         for k, v in c.items():
