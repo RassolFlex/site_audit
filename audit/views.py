@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 
-from audit.main import run_audit
+from audit.audit_service import run_full_audit
 
 
 @csrf_exempt
@@ -13,7 +13,7 @@ def start_audit(request):
         if not url:
             return JsonResponse({'error': 'URL required'}, status=400)
         
-        result = run_audit(url)
+        result = run_full_audit(url)
         return JsonResponse(result, safe=False)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
