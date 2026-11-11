@@ -68,7 +68,6 @@ audit_redirect_btn.addEventListener('click', async (event) => {
     })
 })
 
-
 audit_domain_age_btn.addEventListener('click', async (event) => {
     await runCheck(event.target, 'domain_age', function(data) {
         if (data.ok) {
@@ -82,7 +81,6 @@ audit_domain_age_btn.addEventListener('click', async (event) => {
         }
     })
 })
-
 
 audit_pagespeed_btn.addEventListener('click', async (event) => {
     await runCheck(event.target, 'pagespeed', function(data) {

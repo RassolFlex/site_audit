@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Экспресс-аудит сайта</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); padding: 40px; }
+        h1 { text-align: center; color: #667eea; margin-bottom: 10px; font-size: 2.5em; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 1.1em; }
+        .form-group { margin-bottom: 25px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; }
+        input[type="text"] { width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; }
+        input[type="text"]:focus { outline: none; border-color: #667eea; }
+        button { width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: 600; cursor: pointer; transition: transform 0.3s; }
+        button:hover { transform: translateY(-2px); }
+        #results { margin-top: 30px; display: none; }
+        .json-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 600px;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .json-key { color: #9cdcfe; }
+        .json-string { color: #ce9178; }
+        .json-boolean { color: #569cd6; }
+        .json-null { color: #569cd6; }
+        .json-number { color: #b898c9; }
+        .loading { text-align: center; padding: 20px; display: none; color: #667eea; font-weight: bold; }
+        .loading-icon { font-size: 2em; animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .result-header { text-align: center; font-size: 1.3em; font-weight: bold; color: #444; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Экспресс-аудит сайта</h1>
+        <p class="subtitle">Бесплатный анализ параметров для SEO и производительности</p>
+        
+        <form id="auditForm" method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="url">Введите URL сайта:</label>
+                <input type="text" id="url" name="url" placeholder="https://example.com" required>
+            </div>
+            <button type="submit">🚀 Запустить аудит</button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="loading-icon">⏳</div>
+            <p>Выполняется проверка...</p>
+        </div>
+        
+        <div id="results">
+            <div class="result-header">📊 Результат аудита (сырой JSON)</div>
+            <pre id="jsonOutput" class="json-output"></pre>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('auditForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            var urlInput = document.getElementById('url');
+            var loading = document.getElementById('loading');
+            var resultsDiv = document.getElementById('results');
+            var jsonOutput = document.getElementById('jsonOutput');
+            
+            urlInput.value = urlInput.value.trim();
+            
+            if (!urlInput.value) {
+                alert('Введите URL сайта');
+                return;
+            }
+            
+            loading.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            jsonOutput.textContent = '';
+            
+            try {
+                const response = await fetch('/audit/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]').value
+                    },
+                    body: new URLSearchParams({ url: urlInput.value })
+                });
+                
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    jsonOutput.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    jsonOutput.textContent = JSON.stringify(data, null, 2);
+                }
+                
+                resultsDiv.style.display = 'block';
+            } catch (err) {
+                jsonOutput.textContent = JSON.stringify({ error: err.message }, null, 2);
+                resultsDiv.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

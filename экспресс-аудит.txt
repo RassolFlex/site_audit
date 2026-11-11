@@ -1,0 +1,29 @@
+Создать инструмент "Экспресс-аудит"
+
+1. Возраст домена - https://2ip.ru/domain-age/
+
+2. Система управления - https://2ip.ru/cms/
+
+3. Индексация - https://a.pr-cy.ru (Тут можно столкнуться с проблемой, что сервис не подгружает инфу по одному из поисковиков . Я выхожу из ситуации вручную, через префикс «site» или «host». Как это можно автоматизировать – надо подумать.)
+
+4. Редирект WWW - https://a.pr-cy.ru
+
+5. SSL – сертификат - https://a.pr-cy.ru
+
+6. Скорость загрузки - https://pagespeed.web.dev/ или https://a.pr-cy.ru
+
+7. Микроразметка, кодировка, кеширование, ссылка с 404 на главную, местоположение сервера, тег viewport, фавикон
+
+ Все беру тут - https://a.pr-cy.ru
+
+8. Метатеги title и description (иногда H1-H6) - http://audit.megaindex.ru/cabinet,
+
+9. Графический контент - https://a.pr-cy.ru
+
+10. Robots.txt - https://tools.pixelplus.ru/tools/fast-audit
+
+11. Дубли страниц - https://be1.ru/stat
+
+12. Соц.сигналы – https://be1.ru/stat
+
+13. Конкуренты - https://be1.ru/stat , https://tools.pixelplus.ru/tools/positions , https://ru.megaindex.com/visibility
