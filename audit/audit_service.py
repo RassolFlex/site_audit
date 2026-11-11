@@ -104,29 +104,53 @@ def check_domain(url):
 
 
 def check_ssl(url):
-    """Check SSL/TLS configuration."""
-    parsed = urlparse(url)
-    host = parsed.hostname
-    if not host or parsed.scheme != "https":
-        return {"error": "URL must be https://"}
+    """Check SSL certificate details."""
     try:
-        context = ssl.create_default_context()
+        parsed = urlparse(url)
+        host = parsed.hostname
+        if not host:
+            return {"error": "Invalid URL"}
+
+        ctx = ssl.create_default_context()
         with socket.create_connection((host, 443), timeout=TIMEOUT) as sock:
-            with context.wrap_socket(sock, server_hostname=host) as ssock:
-                cert = ssock.getpeercert()
-                issuer = dict((k, v) for k, v in cert.get("issuer", []))
-                subject = dict((k, v) for k, v in cert.get("subject", []))
-                valid_from = cert["notBefore"]
-                valid_to = cert["notAfter"]
-                days = datetime.datetime.fromtimestamp(int(valid_to)).toordinal() - datetime.datetime.now().toordinal()
-                return {
-                    "ssl": True,
-                    "issuer": issuer,
-                    "subject": subject,
-                    "valid_from": valid_from,
-                    "valid_to": valid_to,
-                    "days": days
-                }
+            with ctx.wrap_socket(sock, server_hostname=host) as s:
+                cert = s.getpeercert()
+
+        now = datetime.datetime.now()
+        not_before = datetime.datetime.strptime(cert["notBefore"], "%b %d %H:%M:%S %Y %Z")
+        not_after = datetime.datetime.strptime(cert["notAfter"], "%b %d %H:%M:%S %Y %Z")
+        valid_to = not_after - now
+        days = valid_to.days
+
+        def extract_cn(tuples):
+            """Extract CN from certificate subject/issuer tuples."""
+            def find_value(target_tuples, key):
+                """Recursively search for key in nested tuples."""
+                for item in target_tuples:
+                    if isinstance(item, tuple):
+                        if len(item) == 2 and isinstance(item[0], str):
+                            if item[0] == key:
+                                return item[1]
+                        else:
+                            result = find_value(item, key)
+                            if result:
+                                return result
+                return None
+            
+            cn = find_value(tuples, "commonName") or find_value(tuples, "CN")
+            return cn or "Unknown"
+
+        issuer = extract_cn(cert["issuer"])
+        subject = extract_cn(cert["subject"])
+
+        return {
+            "issuer": issuer,
+            "subject": subject,
+            "not_before": not_before.strftime("%Y-%m-%d"),
+            "not_after": not_after.strftime("%Y-%m-%d"),
+            "valid_to": str(valid_to),
+            "days": days,
+        }
     except Exception as e:
         return {"error": str(e)}
 
