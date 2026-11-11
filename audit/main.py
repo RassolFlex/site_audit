@@ -21,15 +21,76 @@ def safe_json(obj):
 
 
 def check_domain(url):
-    """Check domain registration info."""
+    """Check domain registration info using WHOIS."""
     try:
+        import whois
+        
         parsed = urlparse(url)
+        domain = parsed.hostname
+        if not domain:
+            return {"error": "Invalid URL"}
+        
+        w = whois.whois(domain)
+        
+        if not w:
+            return {"error": f"WHOIS query failed for {domain}"}
+        
+        created = w.created
+        if isinstance(created, list):
+            created = created[0] if created else None
+        if isinstance(created, (datetime.datetime, datetime.date)):
+            created_str = created.strftime("%Y-%m-%d %H:%M:%S")
+        elif isinstance(created, str):
+            created_str = created
+        else:
+            created_str = str(created) if created else "Unknown"
+        
+        age_info = {"days": None, "years": None, "months": None}
+        if isinstance(created, (datetime.datetime, datetime.date)):
+            now = datetime.datetime.now()
+            delta = now - created
+            days = delta.days
+            age_info["days"] = days
+            age_info["years"] = days // 365
+            age_info["months"] = (days % 365) // 30
+        elif isinstance(created, str):
+            age_info["note"] = "Unable to calculate age - WHOIS date format not recognized"
+        
+        expires = w.expiration_date
+        if isinstance(expires, list):
+            expires = expires[0] if expires else None
+        if isinstance(expires, (datetime.datetime, datetime.date)):
+            expires_str = expires.strftime("%Y-%m-%d %H:%M:%S")
+        elif isinstance(expires, str):
+            expires_str = expires
+        else:
+            expires_str = str(expires) if expires else "Unknown"
+        
+        nameservers = []
+        if isinstance(w.name_servers, list):
+            nameservers = [ns.strip() for ns in w.name_servers]
+        
+        registrar = None
+        if isinstance(w.registrar, str):
+            registrar = w.registrar.strip() if w.registrar else None
+        elif isinstance(w.registrar, list):
+            registrar = w.registrar[0].strip() if w.registrar else None
+        if not registrar:
+            registrar = "Unknown"
+        
         return {
-            "url": url,
-            "scheme": parsed.scheme,
-            "host": parsed.hostname,
-            "port": parsed.port
+            "domain": domain,
+            "registrar": registrar,
+            "created": created_str,
+            "expires": expires_str,
+            "age": age_info,
+            "nameservers": nameservers,
+            "registrar_url": w.name if hasattr(w, 'name') and w.name else None,
+            "status": w.status if hasattr(w, 'status') else None
         }
+        
+    except ImportError:
+        return {"error": "python-whois module not installed"}
     except Exception as e:
         return {"error": str(e)}
 

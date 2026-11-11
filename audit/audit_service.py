@@ -21,15 +21,84 @@ def safe_json(obj):
 
 
 def check_domain(url):
-    """Check domain registration info."""
+    """Check domain registration info using WHOIS."""
     try:
+        import whois
+        
         parsed = urlparse(url)
+        domain = parsed.hostname
+        if not domain:
+            return {"error": "Invalid URL"}
+        
+        # Query WHOIS database
+        w = whois.whois(domain)
+        
+        if not w:
+            return {"error": f"WHOIS query failed for {domain}"}
+        
+        # Extract registration date
+        created = w.created
+        if not created and hasattr(w, 'creation_date'):
+            created = w.creation_date
+        if isinstance(created, list):
+            created = created[0] if created else None
+        if isinstance(created, (datetime.datetime, datetime.date)):
+            created_str = created.strftime("%Y-%m-%d %H:%M:%S")
+        elif isinstance(created, str):
+            created_str = created
+        else:
+            created_str = str(created) if created else "Unknown"
+        
+        # Calculate domain age
+        age_info = {"days": None, "years": None, "months": None}
+        if isinstance(created, (datetime.datetime, datetime.date)):
+            now = datetime.datetime.now()
+            delta = now - created
+            days = delta.days
+            age_info["days"] = days
+            age_info["years"] = days // 365
+            age_info["months"] = (days % 365) // 30
+        elif isinstance(created, str):
+            age_info["note"] = "Unable to calculate age - WHOIS date format not recognized"
+        
+        # Extract expiration date
+        expires = w.expiration_date
+        if isinstance(expires, list):
+            expires = expires[0] if expires else None
+        if isinstance(expires, (datetime.datetime, datetime.date)):
+            expires_str = expires.strftime("%Y-%m-%d %H:%M:%S")
+        elif isinstance(expires, str):
+            expires_str = expires
+        else:
+            expires_str = str(expires) if expires else "Unknown"
+        
+        # Get nameservers
+        nameservers = []
+        if isinstance(w.name_servers, list):
+            nameservers = [ns.strip() for ns in w.name_servers]
+        
+        # Extract registrar info
+        registrar = None
+        if isinstance(w.registrar, str):
+            registrar = w.registrar.strip() if w.registrar else None
+        elif isinstance(w.registrar, list):
+            registrar = w.registrar[0].strip() if w.registrar else None
+        if not registrar:
+            registrar = "Unknown"
+        
         return {
-            "url": url,
-            "scheme": parsed.scheme,
-            "host": parsed.hostname,
-            "port": parsed.port
+            "domain": domain,
+            "registrar": registrar,
+            "created": created_str,
+            "expires": expires_str,
+            "age": age_info,
+            "nameservers": nameservers,
+            "registrar_url": w.name if hasattr(w, 'name') and w.name else None,
+            "status": w.status if hasattr(w, 'status') else None
         }
+        
+    except ImportError:
+        return {"error": "python-whois module not installed"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -63,12 +132,30 @@ def check_ssl(url):
 
 
 def check_redirect(url, timeout):
-    """Check redirects, report final URL and status."""
+    """Check redirects, report entire chain with status codes."""
     try:
+        # Make request following redirects
         resp = requests.get(url, timeout=timeout, allow_redirects=True)
+
         if resp.history:
-            return {"redirect_chain": [{"url": r.url, "status": r.status_code, "location": r.headers.get("Location", None)} for r in resp.history]}
-        return {"final_url": resp.url, "status": resp.status_code}
+            # Build chain from redirect history
+            chain = []
+            for r in resp.history:
+                chain.append({
+                    "url": r.url,
+                    "status": r.status_code,
+                    "location": r.headers.get("Location", None)
+                })
+            # Add final destination
+            chain.append({
+                "url": resp.url,
+                "status": resp.status_code,
+                "location": None
+            })
+            return {"redirect_chain": chain}
+        else:
+            # No redirects
+            return {"final_url": resp.url, "status": resp.status_code}
     except Exception as e:
         return {"error": str(e)}
 
